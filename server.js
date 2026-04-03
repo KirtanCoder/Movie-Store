@@ -52,15 +52,22 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.PORT || 3000;
 
-const startServer = async () => {
-  await connectDB();
-  await seedDatabase();
-  
+// Connect to DB (this is safe for serverless because we check active connections)
+connectDB().then(() => {
+  // Only attempt seeding if explicitly asked or in dev to save startup time
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    seedDatabase().catch(console.error);
+  }
+}).catch(console.error);
+
+// Only listen locally, Vercel will handle requests directly to the exported app
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`\n🚀 MovieStore Server running on http://localhost:${PORT}`);
     console.log(`📁 Static files: ${path.join(__dirname, 'public')}`);
     console.log(`🔑 Admin: admin@moviestore.com / admin123\n`);
   });
-};
+}
 
-startServer();
+// Export the Express API
+module.exports = app;
